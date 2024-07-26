@@ -52,10 +52,13 @@ EXTENSION_MAP: dict[str, Path] = {
     "docx": Path("text/"),
     "nfo": Path("text/"),
     "pdf": Path("text/"),
+    "diz": Path("text/"),
     "dds": Path("dds/"),
     "bmp": Path("bmp/"),
     "scn": Path("scn/"),
     "tga": Path("tga/"),
+    "mpq": Path("unknown-mpq"),
+    "Autosave": Path("unknown-mpq/"),
 }
 
 ARCHIVE_EXTENSIONS = {".zip", ".7z", ".rar", ".001"}
@@ -63,7 +66,27 @@ SEVENZ_EXTENSIONS = {".7z", ".001"}
 
 BLACKLISTED_DIRECTORIES = set(EXTENSION_MAP.values())
 
-DELETE_FILETYPES = {".exe", ".ini", ".rep", ".reg", ".nif", ".dll", ".graal", ".ttf", ".ico", ".esp"}
+DELETE_FILETYPES = {
+    ".exe",
+    ".ini",
+    ".rep",
+    ".reg",
+    ".nif",
+    ".dll",
+    ".graal",
+    ".ttf",
+    ".ico",
+    ".esp",
+    ".ocx",
+    ".chk",
+    ".unt",
+    ".lst",
+    ".ani",
+    ".dat",
+    ".chr",
+    ".opt",
+    ".snd",
+}
 
 
 def compute_sha256(file_path: Path) -> str:
