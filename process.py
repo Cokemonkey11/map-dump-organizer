@@ -13,7 +13,7 @@ import sh
 sevenz = sh.Command("7z")
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, 
+logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s',
                     stream=sys.stdout)
 
@@ -64,7 +64,7 @@ EXTENSION_MAP: dict[str, Path] = {
     "bmp": Path("bmp/"),
     "scn": Path("scn/"),
     "tga": Path("tga/"),
-    "mpq": Path("unknown-mpq"),
+    "mpq": Path("unknown-mpq/"),
     "autosave": Path("unknown-mpq/"),
 }
 
@@ -229,6 +229,15 @@ def process_directory(directory: Path, max_steps: int) -> None:
                 if metadata.lower() == "data":
                     file_path.unlink()
                     logging.info(f"Deleted binary blob: {file_path}")
+                elif "Apple DiskCopy" in metadata:
+                    file_path.unlink()
+                    logging.info(f"Deleted apple diskcopy: {file_path}")
+                elif "MoPaQ (MPQ) archive" in metadata:
+                    move_file(file_path, Path("unknown-mpq/"))
+                    logging.info(f"Moved MoPaQ archive to unknown-mpq: {file_path}")
+                elif "ascii text" in metadata.lower():
+                    move_file(file_path, Path("text/"))
+                    logging.info(f"Moved ASCII text file to text/: {file_path}")
                 else:
                     logging.info(f"Skipping file without extension: {file_path}. Metadata: {metadata}")
                 continue
