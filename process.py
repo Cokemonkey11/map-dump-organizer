@@ -3,12 +3,19 @@ import shutil
 import argparse
 import hashlib
 import uuid
+import subprocess
+import logging
+import sys
 from pathlib import Path
 
 import sh
 
 sevenz = sh.Command("7z")
 
+# Set up logging
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    stream=sys.stdout)
 
 EXTENSION_MAP: dict[str, Path] = {
     "scm": Path("scm/"),
@@ -109,6 +116,14 @@ DELETE_FILETYPES = {
     ".xml",
 }
 
+def get_file_metadata(file_path: Path) -> str:
+    """Get file metadata using the 'file' command."""
+    try:
+        result = subprocess.run(['file', '-b', str(file_path)], capture_output=True, text=True)
+        return result.stdout.strip()
+    except Exception as e:
+        logging.error(f"Error getting metadata for {file_path}: {e}")
+        return ""
 
 def compute_sha256(file_path: Path) -> str:
     """Compute and return the SHA-256 hash of the file."""
@@ -118,14 +133,13 @@ def compute_sha256(file_path: Path) -> str:
             sha256_hash.update(byte_block)
     return sha256_hash.hexdigest()
 
-
 def move_file(file_path: Path, target_dir: Path) -> None:
     """Move file to the specified target directory, handling potential duplicates."""
     target_dir.mkdir(parents=True, exist_ok=True)
     destination = target_dir / file_path.name
 
     if file_path.resolve() == destination.resolve():
-        print(f"'{file_path}' is already in the target directory.")
+        logging.info(f"'{file_path}' is already in the target directory.")
         return
 
     if destination.exists():
@@ -136,34 +150,32 @@ def move_file(file_path: Path, target_dir: Path) -> None:
         if source_hash == destination_hash:
             # If files are identical, delete the source file
             file_path.unlink()
-            print(f"Deleted '{file_path}' as an identical file already exists at '{destination}'.")
+            logging.info(f"Deleted '{file_path}' as an identical file already exists at '{destination}'.")
         else:
             # If not identical, append a UUID fragment to the filename to avoid collision
             unique_suffix = uuid.uuid4().hex[:6]
             new_destination = destination.with_name(destination.stem + f"_{unique_suffix}" + destination.suffix)
             shutil.move(str(file_path), str(new_destination))
-            print(f"Moved '{file_path}' to '{new_destination}' to avoid overwriting existing file.")
+            logging.info(f"Moved '{file_path}' to '{new_destination}' to avoid overwriting existing file.")
     else:
         # No existing file, proceed with normal move
         shutil.move(str(file_path), str(destination))
-        print(f"Moved '{file_path}' to '{destination}'.")
-
+        logging.info(f"Moved '{file_path}' to '{destination}'.")
 
 def extract_archive(archive_path: Path, target_dir_base: Path) -> None:
     """Extracts archive to the specified target directory using 'unar'."""
     target_dir = target_dir_base.parent / f"{target_dir_base.name}_{str(uuid.uuid4())[:6]}"
     target_dir.mkdir(parents=True, exist_ok=True)
     try:
-        print(f"Processing {archive_path}...")
+        logging.info(f"Processing {archive_path}...")
         if any(archive_path.name.endswith(ext) for ext in SEVENZ_EXTENSIONS):
             sevenz("x", str(archive_path), f"-o{target_dir}")
         else:
             sh.unar("-o", str(target_dir), str(archive_path))
-        print(f"...Done. Deleting {archive_path}.")
+        logging.info(f"...Done. Deleting {archive_path}.")
         archive_path.unlink()
     except Exception as e:
-        print(f"Failed to process {archive_path} ({e})")
-
+        logging.error(f"Failed to process {archive_path} ({e})")
 
 def remove_empty_directories(directory: Path) -> None:
     """Recursively removes empty directories."""
@@ -174,14 +186,13 @@ def remove_empty_directories(directory: Path) -> None:
 
             if not any(dir_path.iterdir()):
                 dir_path.rmdir()
-                # print(f"Removed empty directory: {dir_path}")
-
+                logging.info(f"Removed empty directory: {dir_path}")
 
 def process_directory(directory: Path, max_steps: int) -> None:
     """Recursively process the directory to flatten its structure."""
     steps = 0
     for root, dirs, files in os.walk(directory, topdown=True):
-        print(f"  Processing {root}")
+        logging.info(f"Processing {root}")
 
         # Filter out blacklisted directories.
         root_path = Path(root)
@@ -198,18 +209,27 @@ def process_directory(directory: Path, max_steps: int) -> None:
 
             if file_path.suffix.lower() in DELETE_FILETYPES:
                 file_path.unlink()
-                print(f"Immediately deleting {file_path}")
+                logging.info(f"Immediately deleting {file_path}")
                 continue
 
             ext = file_path.suffix[1:].lower()  # Remove the dot from the suffix.
+            if not ext:
+                # Handle files without extensions
+                metadata = get_file_metadata(file_path)
+                if metadata.lower() == "data":
+                    file_path.unlink()
+                    logging.info(f"Deleted binary blob: {file_path}")
+                else:
+                    logging.info(f"Skipping file without extension: {file_path}. Metadata: {metadata}")
+                continue
+
             target_dir = EXTENSION_MAP.get(ext, Path("./"))
             move_file(file_path, target_dir)
 
     remove_empty_directories(directory)
     if not any(directory.iterdir()):
         directory.rmdir()
-        print(f"Removed empty directory: {directory}")
-
+        logging.info(f"Removed empty directory: {directory}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Flatten a directory and organize files by extension.")
@@ -218,4 +238,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     process_directory(args.directory, args.max_steps)
-    print("Processing completed.")
+    logging.info("Processing completed.")
