@@ -116,6 +116,8 @@ DELETE_FILETYPES = {
     ".xml",
 }
 
+USELESS_EXTENSIONS = {".bak", ".part"}
+
 def get_file_metadata(file_path: Path) -> str:
     """Get file metadata using the 'file' command."""
     try:
@@ -188,6 +190,14 @@ def remove_empty_directories(directory: Path) -> None:
                 dir_path.rmdir()
                 logging.info(f"Removed empty directory: {dir_path}")
 
+def get_useful_extension(file_path: Path) -> str:
+    """
+    Get the useful extension of a file, ignoring 'useless' extensions.
+    """
+    while file_path.suffix.lower() in USELESS_EXTENSIONS:
+        file_path = file_path.with_suffix("")
+    return file_path.suffix[1:].lower()  # Remove the dot from the suffix
+
 def process_directory(directory: Path, max_steps: int) -> None:
     """Recursively process the directory to flatten its structure."""
     steps = 0
@@ -212,7 +222,7 @@ def process_directory(directory: Path, max_steps: int) -> None:
                 logging.info(f"Immediately deleting {file_path}")
                 continue
 
-            ext = file_path.suffix[1:].lower()  # Remove the dot from the suffix.
+            ext = get_useful_extension(file_path)
             if not ext:
                 # Handle files without extensions
                 metadata = get_file_metadata(file_path)
