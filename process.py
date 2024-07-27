@@ -58,7 +58,7 @@ EXTENSION_MAP: dict[str, Path] = {
     "scn": Path("scn/"),
     "tga": Path("tga/"),
     "mpq": Path("unknown-mpq"),
-    "Autosave": Path("unknown-mpq/"),
+    "autosave": Path("unknown-mpq/"),
 }
 
 ARCHIVE_EXTENSIONS = {".zip", ".7z", ".rar", ".001"}
@@ -67,13 +67,31 @@ SEVENZ_EXTENSIONS = {".7z", ".001"}
 BLACKLISTED_DIRECTORIES = set(EXTENSION_MAP.values())
 
 DELETE_FILETYPES = {
+    ".1",
+    ".bsp",
+    ".db",
     ".exe",
+    ".ex_",
+    ".img",
     ".ini",
+    ".ins",
+    ".iss",
+    ".lev",
+    ".lft",
+    ".lib",
+    ".log",
+    ".lpl",
+    ".map",
+    ".pkg",
     ".rep",
     ".reg",
+    ".rmf",
+    ".url",
     ".nif",
     ".dll",
     ".graal",
+    ".sqlite",
+    ".torrent",
     ".ttf",
     ".ico",
     ".esp",
@@ -86,6 +104,9 @@ DELETE_FILETYPES = {
     ".chr",
     ".opt",
     ".snd",
+    ".rsrc",
+    ".bin",
+    ".xml",
 }
 
 
